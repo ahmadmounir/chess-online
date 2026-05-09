@@ -220,6 +220,8 @@ class ChessWidget(QWidget):
     def mousePressEvent(self, event) -> None:
         if event.button() != Qt.MouseButton.LeftButton:
             return
+        if self.game.white_turn != self.is_white_player:
+            return
         col, row = self._to_board(event.position().x(), event.position().y())
 
         if self.game.game_over:
@@ -253,6 +255,8 @@ class ChessWidget(QWidget):
 
     def mouseReleaseEvent(self, event) -> None:
         if event.button() != Qt.MouseButton.LeftButton:
+            return
+        if self.game.white_turn != self.is_white_player:
             return
         if self.game.active_piece and self.game.dragging:
             col, row = self._to_board(event.position().x(), event.position().y())
