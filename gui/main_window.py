@@ -17,9 +17,10 @@ from game import Game
 from client import NetworkClient
 from move import Move
 
-from gui.start_screen  import StartScreen
-from gui.chess_widget  import ChessWidget
-from gui.end_screen    import EndScreen
+from gui.start_screen   import StartScreen
+from gui.waiting_screen import WaitingScreen
+from gui.chess_widget   import ChessWidget
+from gui.end_screen     import EndScreen
 
 
 class GameScreen(QWidget):
@@ -95,9 +96,10 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
         self.setCentralWidget(self._stack)
 
-        self._start_screen: StartScreen | None = None
-        self._game_screen:  GameScreen  | None = None
-        self._end_screen:   EndScreen   | None = None
+        self._start_screen:   StartScreen   | None = None
+        self._waiting_screen: WaitingScreen | None = None
+        self._game_screen:    GameScreen    | None = None
+        self._end_screen:     EndScreen     | None = None
 
         self._game:   Game | None = None
         self._client: NetworkClient | None = None
@@ -118,6 +120,14 @@ class MainWindow(QMainWindow):
         else:
             self._start_screen.reset_button()
         self._stack.setCurrentWidget(self._start_screen)
+
+    def _show_waiting(self) -> None:
+        """Show the waiting screen while we wait for the opponent to connect."""
+        self.setFixedSize(480, 520)
+        if self._waiting_screen is None:
+            self._waiting_screen = WaitingScreen()
+            self._stack.addWidget(self._waiting_screen)
+        self._stack.setCurrentWidget(self._waiting_screen)
 
     def _show_game(self) -> None:
         self.setFixedSize(640, 688)
@@ -199,9 +209,14 @@ class MainWindow(QMainWindow):
             lambda msg: self._handle_game_over(msg))
         client.replay_request_received.connect(self._on_replay_request_received)
         client.replay_accept_received.connect(self._on_replay_accepted)
+        client.game_ready.connect(self._on_game_ready)
         client.connection_error.connect(self._on_connection_error)
 
-        self._show_game()
+        self._show_waiting()
+
+        # If game_ready was already received before signal was connected, trigger now
+        if self._client.is_game_ready():
+            self._on_game_ready()
 
     @pyqtSlot(str)
     def _on_connect_failed(self, error: str) -> None:
@@ -210,6 +225,11 @@ class MainWindow(QMainWindow):
             self, "Connection Failed",
             f"Could not connect to server:\n{error}"
         )
+
+    @pyqtSlot()
+    def _on_game_ready(self) -> None:
+        """Called when server signals both players are connected and ready."""
+        self._show_game()
 
     # ------------------------------------------------------------------ #
     #  Move handling

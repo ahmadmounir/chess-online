@@ -45,6 +45,8 @@ class NetworkClient(QObject):
     # Emitted when opponent requests/accepts replay
     replay_request_received = pyqtSignal()
     replay_accept_received  = pyqtSignal()
+    # Emitted when server signals both players are connected and ready
+    game_ready = pyqtSignal()
     # Emitted on connection error
     connection_error = pyqtSignal(str)
 
@@ -56,6 +58,7 @@ class NetworkClient(QObject):
         self.is_my_turn: bool = False
         self._socket: socket.socket | None = None
         self._connected: bool = False
+        self._game_ready_received: bool = False  # Track if game_ready arrived before signal was connected
 
     # ------------------------------------------------------------------ #
     #  Connection
@@ -121,6 +124,14 @@ class NetworkClient(QObject):
         _send(self._socket, {"type": "replay_accept"})
 
     # ------------------------------------------------------------------ #
+    #  Query
+    # ------------------------------------------------------------------ #
+
+    def is_game_ready(self) -> bool:
+        """Returns True if game_ready message was received."""
+        return self._game_ready_received
+
+    # ------------------------------------------------------------------ #
     #  Background listener
     # ------------------------------------------------------------------ #
 
@@ -147,3 +158,6 @@ class NetworkClient(QObject):
             self.replay_request_received.emit()
         elif msg_type == "replay_accept":
             self.replay_accept_received.emit()
+        elif msg_type == "game_ready":
+            self._game_ready_received = True
+            self.game_ready.emit()

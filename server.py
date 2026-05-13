@@ -59,6 +59,11 @@ class ChessServer:
 
         print("[Server] Both players connected — game starting!")
 
+        # Notify both clients that the game is ready to start
+        send_msg(self.clients[0], {"type": "game_ready"})
+        send_msg(self.clients[1], {"type": "game_ready"})
+        print("[Server] Sent game_ready to both players.")
+
         t0 = threading.Thread(target=self._relay, args=(0, 1), daemon=True)
         t1 = threading.Thread(target=self._relay, args=(1, 0), daemon=True)
         t0.start()
