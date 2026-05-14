@@ -14,11 +14,13 @@ from move import Move
 
 
 def _send(conn: socket.socket, data: dict) -> None:
+    """Send JSON data to server."""
     msg = json.dumps(data) + '\n'
     conn.sendall(msg.encode('utf-8'))
 
 
 def _recv(conn: socket.socket) -> dict:
+    """Receive JSON data from server."""
     buf = b''
     while True:
         chunk = conn.recv(1)
@@ -65,12 +67,12 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------ #
 
     def connect(self) -> None:
-        """Block until connected and player-ID received. Raises on failure."""
+        """Connect to server and receive player ID."""
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((self.server_ip, self.port))
         self._connected = True
 
-        # First message from server is our player ID
+        # Receive player ID from server
         msg = _recv(self._socket)
         if msg.get("type") != "player_id":
             raise ValueError(f"Unexpected first message: {msg}")
@@ -83,6 +85,7 @@ class NetworkClient(QObject):
         t.start()
 
     def disconnect(self) -> None:
+        """Close connection to server."""
         self._connected = False
         try:
             if self._socket:
@@ -103,22 +106,26 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------ #
 
     def send_move(self, move: Move) -> None:
+        """Send move to opponent via server."""
         if not self._connected:
             return
         _send(self._socket, move.to_dict())
         self.is_my_turn = False
 
     def send_game_over(self, result: str) -> None:
+        """Send game end result to opponent."""
         if not self._connected:
             return
         _send(self._socket, {"type": "game_over", "result": result})
 
     def send_replay_request(self) -> None:
+        """Request a rematch with opponent."""
         if not self._connected:
             return
         _send(self._socket, {"type": "replay_request"})
 
     def send_replay_accept(self) -> None:
+        """Accept opponent's rematch request."""
         if not self._connected:
             return
         _send(self._socket, {"type": "replay_accept"})
@@ -136,6 +143,7 @@ class NetworkClient(QObject):
     # ------------------------------------------------------------------ #
 
     def _listen(self) -> None:
+        """Background thread that listens for server messages."""
         try:
             while self._connected:
                 data = _recv(self._socket)
@@ -145,6 +153,7 @@ class NetworkClient(QObject):
                 self.connection_error.emit(str(e))
 
     def _dispatch(self, data: dict) -> None:
+        """Process incoming message and emit appropriate signal."""
         msg_type = data.get("type", "")
         if msg_type == "move":
             move = Move.from_dict(data)
