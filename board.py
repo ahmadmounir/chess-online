@@ -32,11 +32,13 @@ class Board:
     # ------------------------------------------------------------------ #
 
     def get_piece(self, x: int, y: int) -> "Piece | None":
+        """Get piece at coordinate, or None if empty or out of bounds."""
         if 0 <= x < COLS and 0 <= y < ROWS:
             return self.pieces[x][y]
         return None
 
     def get_grid_value(self, x: int, y: int) -> int:
+        """Get piece value at coordinate (positive=white, negative=black)."""
         if 0 <= x < COLS and 0 <= y < ROWS:
             return self.grid[x][y]
         return 0
@@ -49,6 +51,7 @@ class Board:
     # ------------------------------------------------------------------ #
 
     def place_piece(self, x: int, y: int, piece: "Piece | None") -> None:
+        """Place or remove piece at coordinate."""
         if piece is not None:
             self.grid[x][y] = piece.board_value
             self.pieces[x][y] = piece
@@ -60,7 +63,7 @@ class Board:
                        to_x: int, to_y: int,
                        piece: "Piece",
                        all_pieces_ref: list) -> None:
-        """Move `piece` from (from_x,from_y) to (to_x,to_y), recording history."""
+        """Move piece and record captured piece in history."""
         move = Move(from_x, from_y, to_x, to_y)
         self.last_move = move
         self.last_moves.append(move)
@@ -86,7 +89,7 @@ class Board:
     # ------------------------------------------------------------------ #
 
     def clone(self) -> "Board":
-        """Return a shallow-clone board with cloned Piece objects."""
+        """Create a copy of board state for move legality testing."""
         new_board = Board()
         for cx in range(COLS):
             for cy in range(ROWS):
