@@ -7,6 +7,7 @@ import socket
 import threading
 import json
 import sys
+import random
 
 PORT = 5000
 
@@ -50,12 +51,19 @@ class ChessServer:
         server_socket.listen(2)
         print(f"[Server] Started on port {PORT} — waiting for 2 players...")
 
+        # Pre-shuffle player IDs for random assignment (0=White, 1=Black)
+        player_ids = [0, 1]
+        random.shuffle(player_ids)
+        id_index = 0
+        
         for i in range(2):
             conn, addr = server_socket.accept()
-            self.clients[i] = conn
-            # Tell each client which player they are (0 = White, 1 = Black)
-            send_msg(conn, {"type": "player_id", "id": i})
-            print(f"[Server] Player {i} ({'White' if i == 0 else 'Black'}) connected from {addr}")
+            player_id = player_ids[id_index]
+            self.clients[player_id] = conn
+            # Tell each client which player they are — send immediately to allow waiting screen
+            send_msg(conn, {"type": "player_id", "id": player_id})
+            print(f"[Server] Player {i+1} connected from {addr} — assigned as {'White (ID=0)' if player_id == 0 else 'Black (ID=1)'}") 
+            id_index += 1
 
         print("[Server] Both players connected — game starting!")
 
