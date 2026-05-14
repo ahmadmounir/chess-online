@@ -55,6 +55,7 @@ class Game:
     # ------------------------------------------------------------------ #
 
     def reset(self) -> None:
+        """Clear board and reload starting position."""
         self.board = Board()
         self.all_pieces.clear()
         self.white_pieces.clear()
@@ -69,6 +70,7 @@ class Game:
         self._refresh_all()
 
     def select_piece(self, x: int, y: int) -> bool:
+        """Select a piece if it belongs to current player. Return success."""
         if self.game_over:
             return False
         piece = self.board.get_piece(x, y)
@@ -79,10 +81,7 @@ class Game:
 
     def try_move(self, to_x: int, to_y: int,
                  promotion_choice: str = "queen") -> bool:
-        """
-        Attempt to move self.active_piece to (to_x, to_y).
-        Returns True on success, False if the move is illegal or no piece selected.
-        """
+        """Attempt to move selected piece. Return success."""
         if self.game_over or self.active_piece is None:
             return False
 
@@ -115,7 +114,7 @@ class Game:
         return True
 
     def apply_network_move(self, move: Move) -> bool:
-        """Apply an opponent's move received over the network."""
+        """Execute opponent's move received from server."""
         piece = self.board.get_piece(move.from_x, move.from_y)
         if piece is None:
             return False
@@ -124,7 +123,7 @@ class Game:
                              promotion_choice=move.promotion or "queen")
 
     def is_king_in_check(self) -> King | None:
-        """Return current player's king if it is in check, else None."""
+        """Check if current player's king is under attack."""
         king = self.white_king if self.white_turn else self.black_king
         if king and king.is_in_check(self.enemy_moves):
             return king
@@ -135,17 +134,20 @@ class Game:
     # ------------------------------------------------------------------ #
 
     def _execute(self, piece: Piece, to_x: int, to_y: int) -> bool:
+        """Execute piece movement, handling special king rules."""
         if isinstance(piece, King):
             return piece.make_move(to_x, to_y, self.board, self.all_pieces,
                                    self.enemy_moves)
         return piece.make_move(to_x, to_y, self.board, self.all_pieces)
 
     def _change_turn(self) -> None:
+        """Switch to other player's turn and check for checkmate."""
         self.white_turn = not self.white_turn
         self._refresh_all()
         self._detect_checkmate()
 
     def _detect_checkmate(self) -> None:
+        """Check if current player is in checkmate or stalemate."""
         current = self.white_pieces if self.white_turn else self.black_pieces
         if any(len(p.moves) > 0 for p in current):
             return   # still moves available
@@ -165,7 +167,7 @@ class Game:
     # ------------------------------------------------------------------ #
 
     def _refresh_all(self) -> None:
-        """Regenerate pseudo-legal moves for both sides, then filter legals."""
+        """Calculate all legal moves for current player."""
         opponent = self.black_pieces if self.white_turn else self.white_pieces
         current  = self.white_pieces if self.white_turn else self.black_pieces
 
@@ -187,6 +189,7 @@ class Game:
         self.player_moves = [m for p in current for m in p.moves]
 
     def _gen_pseudo(self, pieces: list[Piece]) -> list[Move]:
+        """Generate all pseudo-legal moves for given pieces."""
         moves: list[Move] = []
         for p in pieces:
             p.fill_pseudo_legal_moves(self.board)
@@ -194,10 +197,7 @@ class Game:
         return moves
 
     def _is_legal(self, piece: Piece, move: Move, king: King | None) -> bool:
-        """
-        Simulate the move on a cloned board and verify the king is not in check.
-        Uses a lightweight clone approach.
-        """
+        """Test if move leaves own king safe by simulating it."""
         if king is None:
             return True
 
@@ -258,6 +258,7 @@ class Game:
     # ------------------------------------------------------------------ #
 
     def _promote(self, pawn: Pawn, choice: str) -> None:
+        """Replace pawn with queen, rook, knight, or bishop."""
         x, y, is_white = pawn.x, pawn.y, pawn.is_white
         v = {'queen': 8, 'rook': 5, 'knight': 3, 'bishop': 3}.get(choice, 8)
         board_value = v if is_white else -v
@@ -276,6 +277,7 @@ class Game:
     # ------------------------------------------------------------------ #
 
     def _load_fen(self, fen: str) -> None:
+        """Parse FEN string and place pieces on board."""
         parts = fen.split()
         for row_idx, row_str in enumerate(parts[0].split('/')):
             col = 0
@@ -302,6 +304,7 @@ class Game:
         self._fill_teams()
 
     def _fill_teams(self) -> None:
+        """Organize all pieces by color."""
         self.white_pieces = [p for p in self.all_pieces if p.is_white]
         self.black_pieces = [p for p in self.all_pieces if not p.is_white]
 
